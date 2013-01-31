@@ -1,7 +1,9 @@
 package keepcalm.mods.bukkit.forgeHandler;
 
-import keepcalm.mods.bukkit.bukkitAPI.BukkitServer;
 
+import keepcalm.mods.bukkit.BukkitContainer;
+
+import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.plugin.Plugin;
 
 import cpw.mods.fml.common.ICrashCallable;
@@ -10,13 +12,13 @@ public class BukkitCrashCallable implements ICrashCallable {
 
 	@Override
 	public String call() throws Exception {
-		String versionINFO = BukkitServer.version + " (Bukkit API version " + BukkitServer.apiVer + ")\nPlugins Loaded:";
+		String versionINFO = "BukkitForge " + BukkitContainer.BF_FULL_VERSION + " (with bukkit API version " + CraftServer.apiVer + ")\nPlugins Loaded:";
 		String endMsg;
-		if (BukkitServer.instance() != null) {
+		if (CraftServer.instance() != null) {
 			String plugins = "";
-			int len = BukkitServer.instance().getPluginManager().getPlugins().length;
+			int len = CraftServer.instance().getPluginManager().getPlugins().length;
 			int j = 0;
-			for (Plugin i : BukkitServer.instance().getPluginManager().getPlugins()){
+			for (Plugin i : CraftServer.instance().getPluginManager().getPlugins()){
 				String name = i.getDescription().getFullName() + ": " + (i.isEnabled() ? "Enabled" : "Disabled");
 				if (j == 0) {
 					plugins += name;
@@ -35,7 +37,7 @@ public class BukkitCrashCallable implements ICrashCallable {
 			endMsg = versionINFO + plugins;
 		}
 		else {
-			endMsg = versionINFO + "[No plugins loaded yet]";
+			endMsg = versionINFO + "[Didn't get far enough to load plugins :/]";
 		}
 		return endMsg;
 	}

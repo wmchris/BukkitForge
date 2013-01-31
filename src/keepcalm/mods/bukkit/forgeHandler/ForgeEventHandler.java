@@ -1,27 +1,11 @@
 package keepcalm.mods.bukkit.forgeHandler;
 
-import com.google.common.base.Joiner;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
 import keepcalm.mods.bukkit.BukkitContainer;
-import keepcalm.mods.bukkit.bukkitAPI.BukkitChunk;
-import keepcalm.mods.bukkit.bukkitAPI.BukkitPlayerCache;
-import keepcalm.mods.bukkit.bukkitAPI.BukkitServer;
-import keepcalm.mods.bukkit.bukkitAPI.block.BukkitBlock;
-import keepcalm.mods.bukkit.bukkitAPI.block.BukkitBlockFake;
-import keepcalm.mods.bukkit.bukkitAPI.entity.BukkitCreeper;
-import keepcalm.mods.bukkit.bukkitAPI.entity.BukkitEntity;
-import keepcalm.mods.bukkit.bukkitAPI.entity.BukkitItem;
-import keepcalm.mods.bukkit.bukkitAPI.entity.BukkitLightningStrike;
-import keepcalm.mods.bukkit.bukkitAPI.entity.BukkitLivingEntity;
-import keepcalm.mods.bukkit.bukkitAPI.entity.BukkitPlayer;
-import keepcalm.mods.bukkit.bukkitAPI.entity.BukkitSheep;
-import keepcalm.mods.bukkit.bukkitAPI.event.BukkitEventFactory;
-import keepcalm.mods.bukkit.bukkitAPI.inventory.BukkitItemStack;
 import keepcalm.mods.events.events.BlockDestroyEvent;
 import keepcalm.mods.events.events.CreeperExplodeEvent;
 import keepcalm.mods.events.events.DispenseItemEvent;
@@ -77,6 +61,20 @@ import org.bukkit.TreeType;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.command.CommandSender;
+import org.bukkit.craftbukkit.CraftChunk;
+import org.bukkit.craftbukkit.CraftPlayerCache;
+import org.bukkit.craftbukkit.CraftServer;
+import org.bukkit.craftbukkit.block.CraftBlock;
+import org.bukkit.craftbukkit.block.CraftBlockFake;
+import org.bukkit.craftbukkit.entity.CraftCreeper;
+import org.bukkit.craftbukkit.entity.CraftEntity;
+import org.bukkit.craftbukkit.entity.CraftItem;
+import org.bukkit.craftbukkit.entity.CraftLightningStrike;
+import org.bukkit.craftbukkit.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.entity.CraftSheep;
+import org.bukkit.craftbukkit.event.CraftEventFactory;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -105,6 +103,7 @@ import org.bukkit.event.server.ServerCommandEvent;
 import org.bukkit.event.world.StructureGrowEvent;
 import org.bukkit.util.Vector;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -170,9 +169,9 @@ public class ForgeEventHandler {
 			return;
 		if (ev.entity instanceof EntityLiving && !(ev.entity instanceof EntityPlayer)) {// || ev.entity instanceof EntityPlayerMP) {
 
-			BukkitEntity e = BukkitEntity.getEntity(BukkitServer.instance(), ev.entity);
-			if (!(e instanceof BukkitLivingEntity)) {
-				e = new BukkitLivingEntity(BukkitServer.instance(), (EntityLiving) ev.entity);
+			CraftEntity e = CraftEntity.getEntity(CraftServer.instance(), ev.entity);
+			if (!(e instanceof CraftLivingEntity)) {
+				e = new CraftLivingEntity(CraftServer.instance(), (EntityLiving) ev.entity);
 			}
 			CreatureSpawnEvent bev = new CreatureSpawnEvent((LivingEntity) e, SpawnReason.DEFAULT);
 			Bukkit.getPluginManager().callEvent(bev);
@@ -180,20 +179,20 @@ public class ForgeEventHandler {
 				ev.setCanceled(true);
 			}
 
-			//BukkitEventFactory.callCreatureSpawnEvent((EntityLiving) ev.entity, SpawnReason.DEFAULT);
+			//CraftEventFactory.callCreatureSpawnEvent((EntityLiving) ev.entity, SpawnReason.DEFAULT);
 		}
 	}
 	@ForgeSubscribe
 	public void onItemExpire(ItemExpireEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		BukkitEventFactory.callItemDespawnEvent(ev.entityItem);
+		CraftEventFactory.callItemDespawnEvent(ev.entityItem);
 	}
 	@ForgeSubscribe
 	public void onItemTossEvent(ItemTossEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		BukkitEventFactory.callItemSpawnEvent(ev.entityItem);
+		CraftEventFactory.callItemSpawnEvent(ev.entityItem);
 	}
 	@ForgeSubscribe
 	public void onLivingAttack(LivingAttackEvent ev) {
@@ -202,16 +201,16 @@ public class ForgeEventHandler {
 		EntityDamageEvent bev;
 		if (ev.source.getSourceOfDamage() != null) {
 			bev = new EntityDamageByEntityEvent(
-					BukkitEntity.getEntity(BukkitServer.instance(), 
+					CraftEntity.getEntity(CraftServer.instance(), 
 							ev.source.getSourceOfDamage()), 
-							BukkitEntity.getEntity(BukkitServer.instance(), 
+							CraftEntity.getEntity(CraftServer.instance(), 
 									ev.entityLiving), 
 									getDamageCause(ev.source), ev.ammount);
 
 		}
 		else {
 			bev = new EntityDamageEvent(
-					BukkitEntity.getEntity(BukkitServer.instance(), ev.entityLiving),
+					CraftEntity.getEntity(CraftServer.instance(), ev.entityLiving),
 					getDamageCause(ev.source),
 					ev.ammount);
 		}
@@ -227,9 +226,9 @@ public class ForgeEventHandler {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
 		LivingEntity e;
-		BukkitEntity j = BukkitEntity.getEntity(BukkitServer.instance(), ev.entityLiving);
+		CraftEntity j = CraftEntity.getEntity(CraftServer.instance(), ev.entityLiving);
 		if (!(j instanceof LivingEntity)) {
-			e = new BukkitLivingEntity(BukkitServer.instance(), ev.entityLiving);
+			e = new CraftLivingEntity(CraftServer.instance(), ev.entityLiving);
 		}
 		else {
 			e = (LivingEntity) j;
@@ -237,7 +236,7 @@ public class ForgeEventHandler {
 		List<org.bukkit.inventory.ItemStack> stacks = new ArrayList<org.bukkit.inventory.ItemStack>();
 		for (EntityItem i : ev.entityLiving.capturedDrops) {
 			ItemStack vanilla = i.getEntityItem();
-			stacks.add(new BukkitItemStack(vanilla));
+			stacks.add(new CraftItemStack(vanilla));
 		}
 		EntityDeathEvent bev = new EntityDeathEvent(e, stacks);
 		bev.setDroppedExp(ev.entityLiving.experienceValue);
@@ -247,7 +246,7 @@ public class ForgeEventHandler {
 
 	/*@ForgeSubscribe
 	public void onLivingFall(LivingFallEvent ev) {
-		BukkitEventFactory.callE
+		CraftEventFactory.callE
 	}*/
 	@ForgeSubscribe
 	public void onLivingDamage(LivingHurtEvent ev) {
@@ -256,21 +255,21 @@ public class ForgeEventHandler {
 		DamageCause dc = getDamageCause(ev.source);
 
 
-		BukkitEventFactory.callEntityDamageEvent(ev.source.getEntity(), ev.entity, dc, ev.ammount);
+		CraftEventFactory.callEntityDamageEvent(ev.source.getEntity(), ev.entity, dc, ev.ammount);
 	}
 	@ForgeSubscribe
 	public void onTarget(LivingSetAttackTargetEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		BukkitEventFactory.callEntityTargetEvent(ev.entity, ev.target, TargetReason.CUSTOM);
+		CraftEventFactory.callEntityTargetEvent(ev.entity, ev.target, TargetReason.CUSTOM);
 	}
 	/*@ForgeSubscribe
 	public void specialSpawn(LivingSpecialSpawnEvent ev) {
-		BukkitEventFactory.callCreatureSpawnEvent(ev.entityLiving, spawnReason)
+		CraftEventFactory.callCreatureSpawnEvent(ev.entityLiving, spawnReason)
 	}
 	@ForgeSubscribe
 	public void onCartCollide(MinecartCollisionEvent ev) {
-		BukkitEventFactory.
+		CraftEventFactory.
 	}
 	 */
 	@ForgeSubscribe
@@ -283,14 +282,14 @@ public class ForgeEventHandler {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
 
-		//BukkitEventFactory.callEntityShootBowEvent(ev.entityPlayer, ev.bow, null, ev.charge);
+		//CraftEventFactory.callEntityShootBowEvent(ev.entityPlayer, ev.bow, null, ev.charge);
 	}
 
 	@ForgeSubscribe
 	public void playerVEntity(AttackEntityEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		BukkitEventFactory.callEntityDamageEvent(ev.entityPlayer, ev.target, DamageCause.ENTITY_ATTACK, ev.entityPlayer.inventory.getDamageVsEntity(ev.target));
+		CraftEventFactory.callEntityDamageEvent(ev.entityPlayer, ev.target, DamageCause.ENTITY_ATTACK, ev.entityPlayer.inventory.getDamageVsEntity(ev.target));
 	}
 	/*
 	@ForgeSubscribe
@@ -310,7 +309,7 @@ public class ForgeEventHandler {
 			if (ev.entityPlayer.inventory.getCurrentItem().getItem() instanceof ItemBlock) {
 				if (BukkitContainer.DEBUG)
 					System.out.println("PLACE!");
-				final BukkitItemStack itemInHand = new BukkitItemStack(ev.entityPlayer.inventory.getCurrentItem());
+				final CraftItemStack itemInHand = new CraftItemStack(ev.entityPlayer.inventory.getCurrentItem());
 				final int blockX = ev.x + ForgeDirection.getOrientation(ev.face).offsetX;
 				final int blockY = ev.y + ForgeDirection.getOrientation(ev.face).offsetY;
 				final int blockZ = ev.z + ForgeDirection.getOrientation(ev.face).offsetZ;
@@ -324,8 +323,8 @@ public class ForgeEventHandler {
 					forgePlayerMP = (EntityPlayerMP) ev.entityPlayer;
 				}
 
-				final BukkitPlayer thePlayer = BukkitPlayerCache.getBukkitPlayer(forgePlayerMP);
-				final BukkitBlock beforeBlock = new BukkitBlock(new BukkitChunk(ev.entity.worldObj.getChunkFromBlockCoords(ev.x, ev.y)), blockX, blockY, blockZ);
+				final CraftPlayer thePlayer = CraftPlayerCache.getCraftPlayer(forgePlayerMP);
+				final CraftBlock beforeBlock = new CraftBlock(new CraftChunk(ev.entity.worldObj.getChunkFromBlockCoords(ev.x, ev.y)), blockX, blockY, blockZ);
 				WorldServer world = (WorldServer) ev.entity.worldObj;
 				int minX = world.getSpawnPoint().posX;
 				int minY = world.getSpawnPoint().posY;
@@ -348,7 +347,7 @@ public class ForgeEventHandler {
 				Bukkit.getPluginManager().callEvent(can);
 
 
-				BukkitBlock placedBlock = new BukkitBlockFake(new BukkitChunk(ev.entity.worldObj.getChunkFromBlockCoords(ev.x, ev.y)), blockX, blockY, blockZ, itemInHand.getTypeId(), itemInHand.getDurability());
+				CraftBlock placedBlock = new CraftBlockFake(new CraftChunk(ev.entity.worldObj.getChunkFromBlockCoords(ev.x, ev.y)), blockX, blockY, blockZ, itemInHand.getTypeId(), itemInHand.getDurability());
 				BlockPlaceEvent bev = new BlockPlaceEvent(placedBlock, beforeBlock.getState(), placedBlock, itemInHand, thePlayer, can.isBuildable());
 
 				Bukkit.getPluginManager().callEvent(bev);
@@ -370,7 +369,7 @@ public class ForgeEventHandler {
 					fp = (EntityPlayerMP) ev.entityPlayer;
 				}
 
-				BlockIgniteEvent bev = new BlockIgniteEvent(new BukkitBlock(new BukkitChunk(ev.entity.worldObj.getChunkFromBlockCoords(ev.x, ev.y)), ev.x, ev.y, ev.z), IgniteCause.FLINT_AND_STEEL, BukkitPlayerCache.getBukkitPlayer(fp));
+				BlockIgniteEvent bev = new BlockIgniteEvent(new CraftBlock(new CraftChunk(ev.entity.worldObj.getChunkFromBlockCoords(ev.x, ev.y)), ev.x, ev.y, ev.z), IgniteCause.FLINT_AND_STEEL, CraftPlayerCache.getCraftPlayer(fp));
 
 				Bukkit.getPluginManager().callEvent(bev);
 				if (bev.isCancelled()) {
@@ -393,7 +392,7 @@ public class ForgeEventHandler {
 		else {
 			fp = (EntityPlayerMP) ev.entityPlayer;
 		}
-		PlayerPickupItemEvent bev = new PlayerPickupItemEvent(BukkitPlayerCache.getBukkitPlayer(fp), new BukkitItem(BukkitServer.instance(), ev.item), 0);
+		PlayerPickupItemEvent bev = new PlayerPickupItemEvent(CraftPlayerCache.getCraftPlayer(fp), new CraftItem(CraftServer.instance(), ev.item), 0);
 		bev.setCancelled(ev.entityLiving.captureDrops);
 		Bukkit.getPluginManager().callEvent(bev);
 		if (bev.isCancelled()) {
@@ -403,7 +402,7 @@ public class ForgeEventHandler {
 	}
 
 	@ForgeSubscribe
-	public void fillBukkit(FillBucketEvent ev) {
+	public void fillCraft(FillBucketEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
 		EntityPlayerMP fp;
@@ -414,8 +413,8 @@ public class ForgeEventHandler {
 		else {
 			fp = (EntityPlayerMP) ev.entityPlayer;
 		}
-		BukkitBlock blk = new BukkitBlock(new BukkitChunk(ev.entity.worldObj.getChunkFromBlockCoords(ev.target.blockX, ev.target.blockZ)), ev.target.blockX, ev.target.blockY, ev.target.blockZ);
-		PlayerBucketFillEvent bev = new PlayerBucketFillEvent(BukkitPlayerCache.getBukkitPlayer(fp), blk, BukkitBlock.notchToBlockFace(ev.target.sideHit), Material.BUCKET, new BukkitItemStack(ev.result));
+		CraftBlock blk = new CraftBlock(new CraftChunk(ev.entity.worldObj.getChunkFromBlockCoords(ev.target.blockX, ev.target.blockZ)), ev.target.blockX, ev.target.blockY, ev.target.blockZ);
+		PlayerBucketFillEvent bev = new PlayerBucketFillEvent(CraftPlayerCache.getCraftPlayer(fp), blk, CraftBlock.notchToBlockFace(ev.target.sideHit), Material.BUCKET, new CraftItemStack(ev.result));
 		Bukkit.getPluginManager().callEvent(bev);
 		if (bev.isCancelled()) {
 			ev.setCanceled(true);
@@ -453,10 +452,10 @@ public class ForgeEventHandler {
 			fp = (EntityPlayerMP) ev.entityPlayer;
 		}
 
-		BukkitBlock bb = new BukkitBlock(new BukkitChunk(ev.entity.worldObj.getChunkFromBlockCoords(ev.x, ev.z)), ev.x,ev.y,ev.z);
-		BlockFace face = BukkitBlock.notchToBlockFace(ev.face);
+		CraftBlock bb = new CraftBlock(new CraftChunk(ev.entity.worldObj.getChunkFromBlockCoords(ev.x, ev.z)), ev.x,ev.y,ev.z);
+		BlockFace face = CraftBlock.notchToBlockFace(ev.face);
 		org.bukkit.event.player.PlayerInteractEvent bev = 
-				new org.bukkit.event.player.PlayerInteractEvent(BukkitPlayerCache.getBukkitPlayer(fp), act, new BukkitItemStack(ev.entityPlayer.inventory.getCurrentItem()), bb, face);
+				new org.bukkit.event.player.PlayerInteractEvent(CraftPlayerCache.getCraftPlayer(fp), act, new CraftItemStack(ev.entityPlayer.inventory.getCurrentItem()), bb, face);
 
 		Bukkit.getPluginManager().callEvent(bev);
 
@@ -465,7 +464,7 @@ public class ForgeEventHandler {
 			//ev.setResult(Result.DENY);
 		}
 
-		//BukkitEventFactory.callPlayerInteractEvent((EntityPlayerMP) ev.entityPlayer, act, ev.entityPlayer.inventory.getCurrentItem());
+		//CraftEventFactory.callPlayerInteractEvent((EntityPlayerMP) ev.entityPlayer, act, ev.entityPlayer.inventory.getCurrentItem());
 
 	}
 
@@ -473,7 +472,7 @@ public class ForgeEventHandler {
 	public void playerGoToSleep(PlayerSleepInBedEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		org.bukkit.event.player.PlayerBedEnterEvent bev = new PlayerBedEnterEvent(BukkitPlayerCache.getBukkitPlayer((EntityPlayerMP) ev.entityPlayer), new BukkitBlock(new BukkitChunk(ev.entityPlayer.worldObj.getChunkFromBlockCoords(ev.x, ev.z)), ev.x, ev.y, ev.z));
+		org.bukkit.event.player.PlayerBedEnterEvent bev = new PlayerBedEnterEvent(CraftPlayerCache.getCraftPlayer((EntityPlayerMP) ev.entityPlayer), new CraftBlock(new CraftChunk(ev.entityPlayer.worldObj.getChunkFromBlockCoords(ev.x, ev.z)), ev.x, ev.y, ev.z));
 
 		Bukkit.getPluginManager().callEvent(bev);
 
@@ -486,7 +485,7 @@ public class ForgeEventHandler {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
 
-		final org.bukkit.event.world.ChunkLoadEvent c = new org.bukkit.event.world.ChunkLoadEvent(new BukkitChunk(ev.getChunk()), false);
+		final org.bukkit.event.world.ChunkLoadEvent c = new org.bukkit.event.world.ChunkLoadEvent(new CraftChunk(ev.getChunk()), false);
 
 		Bukkit.getPluginManager().callEvent(c);
 	}
@@ -495,7 +494,7 @@ public class ForgeEventHandler {
 	public void chunkUnloadEvent(ChunkEvent.Unload ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		org.bukkit.event.world.ChunkUnloadEvent c = new org.bukkit.event.world.ChunkUnloadEvent(new BukkitChunk(ev.getChunk()));
+		org.bukkit.event.world.ChunkUnloadEvent c = new org.bukkit.event.world.ChunkUnloadEvent(new CraftChunk(ev.getChunk()));
 		Bukkit.getPluginManager().callEvent(c);
 	}
 
@@ -507,10 +506,10 @@ public class ForgeEventHandler {
 		if (playerDisplayNames.containsKey(newName)) {
 			newName = playerDisplayNames.get(newName);
 		}
-		BukkitPlayer whom = BukkitPlayerCache.getBukkitPlayer(ev.player);
+		CraftPlayer whom = CraftPlayerCache.getCraftPlayer(ev.player);
 
-		AsyncPlayerChatEvent ev1 = new AsyncPlayerChatEvent(false, whom, ev.message, Sets.newHashSet(BukkitServer.instance().getOnlinePlayers()));
-		ev1 = BukkitEventFactory.callEvent(ev1);
+		AsyncPlayerChatEvent ev1 = new AsyncPlayerChatEvent(false, whom, ev.message, Sets.newHashSet(CraftServer.instance().getOnlinePlayers()));
+		ev1 = CraftEventFactory.callEvent(ev1);
 		String newLine = String.format(ev1.getFormat(),new Object[] {newName, ev1.getMessage()});
 		ev.line = newLine;
 		if (ev1.isCancelled()) {
@@ -530,7 +529,7 @@ public class ForgeEventHandler {
 
 
 			//StructureGrowEvent bev = 
-					new StructureGrowEvent(new Location(BukkitServer.instance().getWorld(ev.world.getWorldInfo().getDimension()),ev.x,ev.y,ev.z), type, false, null, new ArrayList<BlockState>());
+					new StructureGrowEvent(new Location(CraftServer.instance().getWorld(ev.world.getWorldInfo().getDimension()),ev.x,ev.y,ev.z), type, false, null, new ArrayList<BlockState>());
 		}
 	}
 
@@ -548,10 +547,10 @@ public class ForgeEventHandler {
 	}*/
 	
 	// TODO: This breaks commands for some reason.
-    //@ForgeSubscribe
+//    @ForgeSubscribe
 	public void serverCmd(CommandEvent ev) {
 		if (ev.sender instanceof EntityPlayerMP) {
-			PlayerCommandPreprocessEvent bev=new PlayerCommandPreprocessEvent(BukkitPlayerCache.getBukkitPlayer((EntityPlayerMP) ev.sender), "/" + ev.command.getCommandName() + " " + Joiner.on(' ').join(ev.parameters));
+			PlayerCommandPreprocessEvent bev=new PlayerCommandPreprocessEvent(CraftPlayerCache.getCraftPlayer((EntityPlayerMP) ev.sender), "/" + ev.command.getCommandName() + " " + Joiner.on(' ').join(ev.parameters));
 			Bukkit.getPluginManager().callEvent(bev);
 			String[] msg = bev.getMessage().split(" ");
 			ev.parameters = Arrays.copyOfRange(msg, 1, msg.length);
@@ -562,25 +561,25 @@ public class ForgeEventHandler {
 		}
 		
 		CommandSender s;
-		if (ev.sender instanceof EntityPlayerMP) s = BukkitPlayerCache.getBukkitPlayer((EntityPlayerMP)ev.sender);
+		if (ev.sender instanceof EntityPlayerMP) s = CraftPlayerCache.getCraftPlayer((EntityPlayerMP)ev.sender);
 		else s = Bukkit.getConsoleSender();
 		
 		ServerCommandEvent bev = new ServerCommandEvent(s, ev.command.getCommandName() + " " + Joiner.on(' ').join(ev.parameters));
 		Bukkit.getPluginManager().callEvent(bev);
 	}
 	
-	// begin BukkitForge-added events
+	// begin CraftForge-added events
 
 	// used PlayerInteractEvent for this
 	/*@ForgeSubscribe
 	public void tryPlaceBlock(PlayerUseItemEvent ev) {
 		if (ev.stack.getItem() instanceof ItemBlock) {
 			ItemBlock block = (ItemBlock) ev.stack.getItem();
-			BukkitChunk chunk = new BukkitChunk(ev.world.getChunkFromBlockCoords(ev.x, ev.z));
+			CraftChunk chunk = new CraftChunk(ev.world.getChunkFromBlockCoords(ev.x, ev.z));
 			ChunkCoordinates spawn = ev.world.getSpawnPoint();
-			int spawnRadius = BukkitServer.instance().getSpawnRadius();
+			int spawnRadius = CraftServer.instance().getSpawnRadius();
 			boolean canBuild = AxisAlignedBB.getAABBPool().addOrModifyAABBInPool(spawn.posX, spawn.posY, spawn.posZ, spawn.posX + spawnRadius, spawn.posY + spawnRadius, spawn.posZ + spawnRadius).isVecInside(Vec3.createVectorHelper(ev.x, ev.y, ev.z));
-			BukkitBlock bblock = new BukkitBlock(chunk, ev.x, ev.y, ev.z);
+			CraftBlock bblock = new CraftBlock(chunk, ev.x, ev.y, ev.z);
 			BlockCanBuildEvent bukkitEv = new BlockCanBuildEvent(bblock, block.getBlockID(), canBuild);
 			if (!bukkitEv.isBuildable() && canBuild) {
 				// it was changed
@@ -599,9 +598,9 @@ public class ForgeEventHandler {
 		//IRegistry dispenserRegistry = BlockDispenser.dispenseBehaviorRegistry;
 		//IBehaviorDispenseItem theBehaviour = (IBehaviorDispenseItem) dispenserRegistry.func_82594_a(item.getItem());
 		BlockDispenseEvent bev = new BlockDispenseEvent(
-				new BukkitBlock(
-						new BukkitChunk(ev.blockWorld.getChunkFromBlockCoords(ev.blockX, ev.blockZ)),
-						ev.blockX, ev.blockY, ev.blockZ), new BukkitItemStack(item), new Vector());
+				new CraftBlock(
+						new CraftChunk(ev.blockWorld.getChunkFromBlockCoords(ev.blockX, ev.blockZ)),
+						ev.blockX, ev.blockY, ev.blockZ), new CraftItemStack(item), new Vector());
 		Bukkit.getPluginManager().callEvent(bev);
 		if (bev.isCancelled()) {
 			ev.setCanceled(true);
@@ -615,9 +614,9 @@ public class ForgeEventHandler {
 	public void playerDamageBlock(PlayerDamageBlockEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		BlockDamageEvent bev = new BlockDamageEvent(BukkitPlayerCache.getBukkitPlayer((EntityPlayerMP) ev.entityPlayer), 
-				new BukkitBlock(new BukkitChunk(ev.world.getChunkFromBlockCoords(ev.blockX, ev.blockZ)), ev.blockX, ev.blockY, ev.blockZ),
-				new BukkitItemStack(ev.entityPlayer.inventory.getCurrentItem()), 
+		BlockDamageEvent bev = new BlockDamageEvent(CraftPlayerCache.getCraftPlayer((EntityPlayerMP) ev.entityPlayer), 
+				new CraftBlock(new CraftChunk(ev.world.getChunkFromBlockCoords(ev.blockX, ev.blockZ)), ev.blockX, ev.blockY, ev.blockZ),
+				new CraftItemStack(ev.entityPlayer.inventory.getCurrentItem()), 
 				((EntityPlayerMP) ev.entityPlayer).capabilities.isCreativeMode);
 		Bukkit.getPluginManager().callEvent(bev);
 		if (bev.isCancelled()) {
@@ -638,7 +637,7 @@ public class ForgeEventHandler {
 	public void blockBreakSomehow(BlockDestroyEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		BlockBreakEvent bev = new BlockBreakEvent(new BukkitBlock(new BukkitChunk(ev.world.getChunkFromBlockCoords(ev.x, ev.y)), ev.x, ev.y, ev.z), BukkitPlayerCache.getBukkitPlayer(BukkitContainer.MOD_PLAYER));
+		BlockBreakEvent bev = new BlockBreakEvent(new CraftBlock(new CraftChunk(ev.world.getChunkFromBlockCoords(ev.x, ev.y)), ev.x, ev.y, ev.z), CraftPlayerCache.getCraftPlayer(BukkitContainer.MOD_PLAYER));
 		Bukkit.getPluginManager().callEvent(bev);
 
 		if (bev.isCancelled()) {
@@ -667,8 +666,8 @@ public class ForgeEventHandler {
 		for (x = minX; x <= maxX; x++) {
 			for (y = minY; y <= maxY; y++) {
 				for (z = minZ; z <= maxZ; z++) {
-					BukkitBlock b = new BukkitBlock(
-							new BukkitChunk(ev.creeper.worldObj.getChunkFromBlockCoords(x, z)),
+					CraftBlock b = new CraftBlock(
+							new CraftChunk(ev.creeper.worldObj.getChunkFromBlockCoords(x, z)),
 							x,y,z);
 					blocks.add(b);
 					
@@ -679,8 +678,8 @@ public class ForgeEventHandler {
 		
 		//AxisAlignedBB blocks = AxisAlignedBB.getBoundingBox(x - ev.explosionRadius, y - ev.explosionRadius, z - ev.explosionRadius, x + ev.explosionRadius, y + ev.explosionRadius, z + ev.explosionRadius);
 		//world.block
-		Location loc = new Location(BukkitServer.instance().getWorld(ev.creeper.worldObj.getWorldInfo().getDimension()), ev.creeper.posX, ev.creeper.posY, ev.creeper.posZ);
-		EntityExplodeEvent bev = new EntityExplodeEvent(new BukkitCreeper(BukkitServer.instance(), ev.creeper), loc, blocks, 1.0f);
+		Location loc = new Location(CraftServer.instance().getWorld(ev.creeper.worldObj.getWorldInfo().getDimension()), ev.creeper.posX, ev.creeper.posY, ev.creeper.posZ);
+		EntityExplodeEvent bev = new EntityExplodeEvent(new CraftCreeper(CraftServer.instance(), ev.creeper), loc, blocks, 1.0f);
 		Bukkit.getPluginManager().callEvent(bev);
 		if (bev.isCancelled()) {
 			ev.setCanceled(true);
@@ -692,8 +691,8 @@ public class ForgeEventHandler {
 	public void liquidFlow(LiquidFlowEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		BukkitBlockFake newBlk = new BukkitBlockFake(
-				new BukkitChunk(ev.world.getChunkFromBlockCoords(ev.flowToX, ev.flowToZ)), 
+		CraftBlockFake newBlk = new CraftBlockFake(
+				new CraftChunk(ev.world.getChunkFromBlockCoords(ev.flowToX, ev.flowToZ)), 
 				ev.flowToX, 
 				ev.flowToY,
 				ev.flowToZ, 
@@ -701,8 +700,8 @@ public class ForgeEventHandler {
 				0
 				);
 
-		BukkitBlock source = new BukkitBlock(				
-				new BukkitChunk(ev.world.getChunkFromBlockCoords(ev.flowFromX, ev.flowFromZ)), 
+		CraftBlock source = new CraftBlock(				
+				new CraftChunk(ev.world.getChunkFromBlockCoords(ev.flowFromX, ev.flowFromZ)), 
 				ev.flowFromX, 
 				ev.flowFromY,
 				ev.flowFromZ
@@ -720,7 +719,7 @@ public class ForgeEventHandler {
 	public void onSheepDye(SheepDyeEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		SheepDyeWoolEvent bev = new SheepDyeWoolEvent(new BukkitSheep(BukkitServer.instance(), ev.sheep), DyeColor.getByData((byte)ev.newColour));
+		SheepDyeWoolEvent bev = new SheepDyeWoolEvent(new CraftSheep(CraftServer.instance(), ev.sheep), DyeColor.getByData((byte)ev.newColour));
 
 		Bukkit.getPluginManager().callEvent(bev);
 
@@ -735,9 +734,9 @@ public class ForgeEventHandler {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
 		if (!(ev.entityPlayer instanceof EntityPlayerMP)) return;
-		BukkitPlayer player = BukkitPlayerCache.getBukkitPlayer(BukkitServer.instance(), (EntityPlayerMP) ev.entityPlayer);
-		Location old = new Location(BukkitServer.instance().getWorld(ev.entityPlayer.worldObj.getWorldInfo().getDimension()), ev.oldX, ev.oldY, ev.oldZ);
-		Location now = new Location(BukkitServer.instance().getWorld(ev.entityPlayer.worldObj.getWorldInfo().getDimension()), ev.newX, ev.newY, ev.newZ);
+		CraftPlayer player = CraftPlayerCache.getCraftPlayer(CraftServer.instance(), (EntityPlayerMP) ev.entityPlayer);
+		Location old = new Location(CraftServer.instance().getWorld(ev.entityPlayer.worldObj.getWorldInfo().getDimension()), ev.oldX, ev.oldY, ev.oldZ);
+		Location now = new Location(CraftServer.instance().getWorld(ev.entityPlayer.worldObj.getWorldInfo().getDimension()), ev.newX, ev.newY, ev.newZ);
 		org.bukkit.event.player.PlayerMoveEvent bev = new org.bukkit.event.player.PlayerMoveEvent(player, old, now);
 		
 		/*if (old.equals(now)) {
@@ -760,10 +759,10 @@ public class ForgeEventHandler {
 			return;
 		if (ev.entity instanceof EntityPlayerMP) {
 			EntityPlayerMP fp = (EntityPlayerMP) ev.entity;
-			BukkitPlayer player = BukkitPlayerCache.getBukkitPlayer(BukkitServer.instance(), (EntityPlayerMP) ev.entity);
+			CraftPlayer player = CraftPlayerCache.getCraftPlayer(CraftServer.instance(), (EntityPlayerMP) ev.entity);
 
-			BukkitItemStack item = new BukkitItemStack(fp.inventory.getCurrentItem());
-			org.bukkit.event.player.PlayerInteractEvent bev = new org.bukkit.event.player.PlayerInteractEvent(player, Action.PHYSICAL, item, new BukkitBlock(new BukkitChunk(ev.world.getChunkFromBlockCoords(ev.x, ev.z)), ev.x,ev.y,ev.z), BukkitBlock.notchToBlockFace(-1));
+			CraftItemStack item = new CraftItemStack(fp.inventory.getCurrentItem());
+			org.bukkit.event.player.PlayerInteractEvent bev = new org.bukkit.event.player.PlayerInteractEvent(player, Action.PHYSICAL, item, new CraftBlock(new CraftChunk(ev.world.getChunkFromBlockCoords(ev.x, ev.z)), ev.x,ev.y,ev.z), CraftBlock.notchToBlockFace(-1));
 			Bukkit.getPluginManager().callEvent(bev);
 			if (bev.isCancelled()) {
 				ev.setCanceled(true);
@@ -777,7 +776,7 @@ public class ForgeEventHandler {
 			return;
 		if (ev.bolt != null) {
 
-			org.bukkit.event.weather.LightningStrikeEvent bev1 = new org.bukkit.event.weather.LightningStrikeEvent(BukkitServer.instance().getWorld(ev.world.getWorldInfo().getDimension()), new BukkitLightningStrike(BukkitServer.instance(), ev.bolt));
+			org.bukkit.event.weather.LightningStrikeEvent bev1 = new org.bukkit.event.weather.LightningStrikeEvent(CraftServer.instance().getWorld(ev.world.getWorldInfo().getDimension()), new CraftLightningStrike(CraftServer.instance(), ev.bolt));
 			Bukkit.getPluginManager().callEvent(bev1);
 			if (bev1.isCancelled()) {
 				cancelled.add(ev.bolt);
@@ -791,25 +790,31 @@ public class ForgeEventHandler {
 			return;
 		}
 		
-		//BlockIgniteEvent bev = 
-				new BlockIgniteEvent(new BukkitBlock(new BukkitChunk(ev.world.getChunkFromBlockCoords(ev.x, ev.z)), ev.x, ev.y, ev.z), IgniteCause.LIGHTNING, null);
+		BlockIgniteEvent bev = new BlockIgniteEvent(new CraftBlock(new CraftChunk(ev.world.getChunkFromBlockCoords(ev.x, ev.z)), ev.x, ev.y, ev.z), IgniteCause.LIGHTNING, null);
+		Bukkit.getPluginManager().callEvent(bev);
+		
+		if (bev.isCancelled()) {
+			ev.setCanceled(true);
+		}
 	}
 	
         @ForgeSubscribe
 	public void onSignChange(SignChangeEvent ev) {
 		if (!ready|| FMLCommonHandler.instance().getEffectiveSide().isClient())
 			return;
-		BukkitBlock theBlock = new BukkitBlock(
-					new BukkitChunk(ev.signChanger.worldObj.getChunkFromBlockCoords(ev.x, ev.z)),
+		if (BukkitContainer.DEBUG)
+			System.out.println(String.format("SignChange: player %s x %s y %s z %s text %s", new Object[] {ev.signChanger.username, ev.x, ev.y, ev.z, Joiner.on(", ").join(ev.lines) }));
+		CraftBlock theBlock = new CraftBlock(
+					new CraftChunk(ev.signChanger.worldObj.getChunkFromBlockCoords(ev.x, ev.z)),
 					ev.x,
 					ev.y,
 					ev.z
 				);
-		BukkitPlayer thePlayer;
+		CraftPlayer thePlayer;
 		if (ev.signChanger instanceof EntityPlayerMP)
-		thePlayer = BukkitPlayerCache.getBukkitPlayer((EntityPlayerMP)ev.signChanger);
+		thePlayer = CraftPlayerCache.getCraftPlayer((EntityPlayerMP)ev.signChanger);
 		
-		else thePlayer = BukkitPlayerCache.getBukkitPlayer(BukkitContainer.MOD_PLAYER);
+		else thePlayer = CraftPlayerCache.getCraftPlayer(BukkitContainer.MOD_PLAYER);
 		
 		org.bukkit.event.block.SignChangeEvent bev = new org.bukkit.event.block.SignChangeEvent(theBlock, thePlayer, ev.lines);
 		

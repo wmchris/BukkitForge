@@ -2,15 +2,16 @@ package keepcalm.mods.bukkit.forgeHandler;
 
 import java.util.EnumSet;
 
-import org.bukkit.Bukkit;
-import org.bukkit.event.player.PlayerQuitEvent;
-
-import keepcalm.mods.bukkit.bukkitAPI.BukkitPlayerCache;
-import keepcalm.mods.bukkit.bukkitAPI.BukkitServer;
-import keepcalm.mods.bukkit.bukkitAPI.scheduler.B4VScheduler;
 import keepcalm.mods.bukkit.utils.CaseInsensitiveArrayList;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
+
+import org.bukkit.Bukkit;
+import org.bukkit.craftbukkit.CraftPlayerCache;
+import org.bukkit.craftbukkit.CraftServer;
+import org.bukkit.craftbukkit.scheduler.CraftScheduler;
+import org.bukkit.event.player.PlayerQuitEvent;
+
 import cpw.mods.fml.common.ITickHandler;
 import cpw.mods.fml.common.TickType;
 
@@ -27,8 +28,7 @@ public class SchedulerTickHandler implements ITickHandler {
 			tickOffset++;
 			return;
 		}
-		B4VScheduler b4v = (B4VScheduler) BukkitServer.instance().
-				getScheduler();
+		CraftScheduler b4v = (CraftScheduler) CraftServer.instance().getScheduler();
 		if (b4v == null) {
 			System.out.println("WARNING: BukkitForge is ready, but scheduler is not set!");
 			tickOffset++;
@@ -46,6 +46,12 @@ public class SchedulerTickHandler implements ITickHandler {
 			progress++;
 			return;
 		}
+		if (this.playerCheckerThread != null)
+			try {
+				playerCheckerThread.join();
+			} catch (InterruptedException e) {
+				return; // we don't want threads to be left running!
+			}
 		progress = 0;
 		this.playerCheckerThread = new Thread(new Runnable() {
 			@Override
@@ -56,7 +62,7 @@ public class SchedulerTickHandler implements ITickHandler {
 				for (String i : PlayerTracker.online) {
 					if (!cial.contains(i)) {
 						EntityPlayerMP player = MinecraftServer.getServer().getConfigurationManager().createPlayerForUser(i);
-						PlayerQuitEvent ev = new PlayerQuitEvent(BukkitPlayerCache.getBukkitPlayer(player), player.username + " left the game");
+						PlayerQuitEvent ev = new PlayerQuitEvent(CraftPlayerCache.getCraftPlayer(player), player.username + " left the game");
 						Bukkit.getPluginManager().callEvent(ev);
 						PlayerTracker.online.remove(i);
 					}
@@ -65,7 +71,7 @@ public class SchedulerTickHandler implements ITickHandler {
 				
 			}
 		});
-		playerCheckerThread.run();
+		playerCheckerThread.start();
 	}
 
 	@Override

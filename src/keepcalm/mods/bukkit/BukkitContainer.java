@@ -1,7 +1,5 @@
 package keepcalm.mods.bukkit;
 
-import com.google.common.base.Joiner;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -11,18 +9,18 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.Random;
+import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import keepcalm.mods.bukkit.asm.BukkitStarter;
-import keepcalm.mods.bukkit.bukkitAPI.BukkitServer;
-import keepcalm.mods.bukkit.bukkitAPI.scheduler.B4VScheduler;
 import keepcalm.mods.bukkit.common.CommonProxy;
 import keepcalm.mods.bukkit.forgeHandler.BlockBreakEventHandler;
 import keepcalm.mods.bukkit.forgeHandler.BukkitCraftingHandler;
 import keepcalm.mods.bukkit.forgeHandler.BukkitCrashCallable;
 import keepcalm.mods.bukkit.forgeHandler.ConnectionHandler;
 import keepcalm.mods.bukkit.forgeHandler.ForgeEventHandler;
+import keepcalm.mods.bukkit.forgeHandler.ForgePacketHandler;
 import keepcalm.mods.bukkit.forgeHandler.PlayerTracker;
 import keepcalm.mods.bukkit.forgeHandler.SchedulerTickHandler;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -33,6 +31,11 @@ import net.minecraftforge.common.Configuration;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.Property;
 
+import org.bukkit.craftbukkit.CraftServer;
+import org.bukkit.craftbukkit.scheduler.CraftScheduler;
+import org.bukkit.craftbukkit.utils.Versioning;
+
+import com.google.common.base.Joiner;
 import com.google.common.eventbus.EventBus;
 
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -54,6 +57,7 @@ import cpw.mods.fml.common.event.FMLServerStartedEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.event.FMLServerStoppingEvent;
 import cpw.mods.fml.common.network.NetworkMod;
+import cpw.mods.fml.common.network.NetworkMod.SidedPacketHandler;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.common.registry.TickRegistry;
@@ -61,15 +65,19 @@ import cpw.mods.fml.relauncher.Side;
 //import net.minecraftforge.event.EventBus;
 //import net.minecraftforge.event.EventBus;
 
-@Mod(modid="BukkitForge",name="BukkitForge",version="1.4.6-0",certificateFingerprint="")
-@NetworkMod(clientSideRequired=false,serverSideRequired=false,connectionHandler=ConnectionHandler.class)
+@Mod(modid="BukkitForge",name="BukkitForge",version="Unknown",certificateFingerprint="")
+@NetworkMod(clientSideRequired=false,serverSideRequired=false,connectionHandler=ConnectionHandler.class,serverPacketHandlerSpec=@SidedPacketHandler(channels={},packetHandler=ForgePacketHandler.class))
 public class BukkitContainer {
 	public static Properties users;
 	
-	public static BukkitServer bServer;
+	public static final String BF_FULL_VERSION = Versioning.getBFVersion();
+	
+	public static CraftServer bServer;
 	public File myConfigurationFile;
 	public static boolean allowAnsi;
 	public String pluginFolder;
+
+	private Thread updateCheckerThread;
 	public static boolean showAllLogs;
 	public static boolean isDediServer;
 	public static String serverUUID;
@@ -78,7 +86,7 @@ public class BukkitContainer {
 	public static boolean DEBUG = false;// ClassLoader.getSystemResourceAsStream("/net/minecraft/item") == null;
 	// hehe
 	public static boolean IGNORE_CONNECTION_RECEIVED = false;
-	private static String MOD_USERNAME = "[Mod]";
+	public static String MOD_USERNAME = "[Mod]";
 	public static EntityPlayerMP MOD_PLAYER;
 	public static String[] pluginsInPath;
 	public static String CRAFT_VERSION;
@@ -98,7 +106,17 @@ public class BukkitContainer {
 	public static BukkitContainer instance;
 	private static Thread bThread;
 
+	public static int UPDATE_CHECK_INTERVAL;
+	public static boolean ENABLE_UPDATE_CHECK;
+	/**
+	 * 1 for console-only, 0 for broadcast, -1 for both
+	 */
+	public static int UPDATE_ANNOUNCE_METHOD;
 
+	static {
+		System.out.println("THIS SERVER IS RUNNING BUKKITFORGE " + BF_FULL_VERSION + ". JUST IN CASE SOMEONE ASKS!");
+	}
+	
 	public BukkitContainer() {
 		if (FMLCommonHandler.instance().getEffectiveSide().isServer()) {
 			isDediServer = true;
@@ -121,10 +139,16 @@ public class BukkitContainer {
 	public void preInit(FMLPreInitializationEvent ev) {
 		bukkitLogger = ev.getModLog();
 		bukkitLogger.setParent(FMLCommonHandler.instance().getFMLLogger());
-
+		try {
+			bukkitLogger.addHandler(new FileHandler("server.log"));
+		} catch (SecurityException e1) {
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 		meta.modId = "BukkitForge";
 		meta.name = "BukkitForge";
-		meta.version = BukkitServer.version + ", implementing Bukkit version " + BukkitServer.apiVer;
+		meta.version = BF_FULL_VERSION;
 		meta.authorList = Arrays.asList(new String[]{"keepcalm"});
 		meta.description = "An implementation Bukkit API for vanilla Minecraft.";
 		
@@ -179,7 +203,25 @@ public class BukkitContainer {
 		modActionName.comment = "The name of the player to use when passing events from mods (such as block breaks) to plugins";
 		BukkitContainer.MOD_USERNAME = modActionName.value;
 		
-
+		config.addCustomCategoryComment("updatechecking", "Update-related stuff");
+		
+		Property enableUpdateThread = config.get("updatechecking", "allowUpdateChecking", true);
+		enableUpdateThread.comment = "Allow BukkitForge to automatically notify you when there are updates.";
+		BukkitContainer.ENABLE_UPDATE_CHECK = enableUpdateThread.getBoolean(true);
+		
+		Property updateThreadInterval = config.get("updatechecking", "updateInterval", 216000);
+		updateThreadInterval.comment = "Number of seconds between checks - min 3000, max 2^31-1";
+		BukkitContainer.UPDATE_CHECK_INTERVAL = updateThreadInterval.getInt();
+		if (UPDATE_CHECK_INTERVAL < 3000) {
+			UPDATE_CHECK_INTERVAL = 3000;
+		}
+		
+		Property updateMode = config.get("updatechecking", "updateAnnounceMode", "-1");
+		updateMode.comment = "Mode to announce new updates. 0 is broadcast a message on the server, 1 is print to console, -1 is both.";
+		BukkitContainer.UPDATE_ANNOUNCE_METHOD = updateMode.getInt(-1);
+		if (UPDATE_ANNOUNCE_METHOD < -1 || UPDATE_ANNOUNCE_METHOD > 1) {
+			UPDATE_ANNOUNCE_METHOD = -1;
+		}
 		/*Property showAllLogs = config.get(Configuration.CATEGORY_GENERAL, "printForgeLogToGui", false);
 		showAllLogs.comment = "Print stuff that's outputted to the logs to the GUI as it happens.";
 		this.showAllLogs = showAllLogs.getBoolean(false);*/
@@ -187,6 +229,10 @@ public class BukkitContainer {
 		config.save();
 		GameRegistry.registerPlayerTracker(new PlayerTracker());
 		GameRegistry.registerCraftingHandler(new BukkitCraftingHandler());
+		/*if (ENABLE_UPDATE_CHECK) {
+			this.updateCheckerThread = new Thread(new HttpUpdateCheckerThread(), "BukkitForge-HttpChecker");
+			updateCheckerThread.start();
+		}*/
 		FileInputStream fis;
 		propsFile = null;
 		if (FMLCommonHandler.instance().getEffectiveSide().isServer()) {
@@ -225,6 +271,8 @@ public class BukkitContainer {
 			}
 		}
 		
+		
+		
 		BukkitContainer.users = new Properties();
 		if (propsFile == null) return;
 		try {
@@ -235,7 +283,7 @@ public class BukkitContainer {
 			return;
 		}
 		
-		System.out.println("Successfully loaded users: " + Joiner.on(' ').join(users.keySet()));
+		//System.out.println("Successfully loaded users: " + Joiner.on(' ').join(users.keySet()));
 	}
 
 	public static BukkitContainer getInstance() {
@@ -246,7 +294,7 @@ public class BukkitContainer {
 	private String genUUID() {
 		String res = "" + System.currentTimeMillis();
 		res += new Random().nextInt();
-		res += "-" + BukkitServer.version;
+		res += "-" + CraftServer.version;
 		return res;
 	}
 
@@ -297,8 +345,9 @@ public class BukkitContainer {
 	@ServerStopping
 	public void serverStopping(FMLServerStoppingEvent ev) {
 		// reset for potential next launch (if on client)
+		
 		BukkitContainer.bServer.shutdown();
-		B4VScheduler.currentTick = -1;
+		CraftScheduler.currentTick = -1;
 		ForgeEventHandler.ready = false;
 		SchedulerTickHandler.tickOffset = 0;
 		if (propsFile == null) {
